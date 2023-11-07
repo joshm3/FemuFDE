@@ -1,3 +1,5 @@
+cd ..
+
 #Make sure everything is updated
 sudo apt update
 
