@@ -1,5 +1,4 @@
 #specifies kernel module
-ko5204-y := ko5204.o wpt-util.o
 obj-m += ko5204.o
 
 #-C puts it in a directory .../build
