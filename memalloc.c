@@ -1,38 +1,67 @@
 /*
  * memalloc.c for cs 5204 lab 2 part 2- Joshua Martin
  * 
- * gcc memalloc.c -o memalloc
+ * gcc memalloc.c pagemap.c -o memalloc 
 */
 
 /*DISABLE VIRTUAL ADDRESS SPACE RANDOMIZATION
 sudo setarch --verbose --addr-no-randomize ./memalloc
 */
-
+ 
 #include<stdlib.h>
 #include<string.h>
 #include<stdio.h>
 #include<unistd.h>
 
 //part 2 only uses /proc/5204(k)
-//#include "pagemap.h"
+#include "pagemap.h"
 
 
 void **pointerArray;
 
-void sendVa(void* va, FILE* procFile){
-    fprintf(stderr, "%lx\n", (unsigned long)va);
+void sendVa(void* va, FILE *procFile){
+    fprintf(stderr, "sending 0x%lx\n", (unsigned long)va);
     fprintf(procFile, "%p", va);
 }
 
 int main(int argc, char* argv[]){
-    void* p = calloc(1, 1024*1024*1024);
-    FILE *procFile = fopen("/proc/5204k", "w");
-    
-    sendVa(p, procFile);
+    //open up logfile and pagemap
+    FILE *logfilep = fopen("log", "w");
+    fprintf(logfilep, "va,pa,latency\n");
+    char *pmstr = calloc(20, sizeof(char));
+    char *proc = "/proc/";
+    int pidNum = getpid();
+    char pid[6];
+    sprintf(pid, "%d", pidNum);
+    fprintf(stderr, "%s\n", pid);
+    char *pagemap = "/pagemap";
+    strcat(pmstr, proc);
+    strcat(pmstr, pid);
+    strcat(pmstr, pagemap);
+    FILE *pagemapp = fopen(pmstr, "r");
+    int pagemapfd = fileno(pagemapp);
 
+    FILE *procFile = fopen("/proc/5204k", "w");
+
+    //allocate in heap
+    void* p = malloc(1024*1024*1024);
+    ((int*)p)[0] = 68;
+    int check = ((int*)p)[0];
+    //fprintf(stderr, "68: %d\n", ((int*)p)[0]);
+
+    //void* test = (void*)0x7ffff7ded000;
+    sendVa(p, procFile);
+    logToFile(p, pagemapfd, logfilep);
+
+    fclose(procFile);
+    fclose(pagemapp);
+    fclose(logfilep);
+
+    //time to check /proc/pid/maps
+    // int input;
+    // scanf("%d", &input);
 
     free(p);
-    fclose(procFile);
 }
 
 
