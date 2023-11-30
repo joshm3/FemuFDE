@@ -2,19 +2,28 @@
  * memalloc.c for cs 5204 lab 2 part 2- Joshua Martin
  * 
  * gcc memalloc.c pagemap.c -o memalloc 
+
+ * gcc memalloc.c -o memalloc
 */
 
 /*DISABLE VIRTUAL ADDRESS SPACE RANDOMIZATION
 sudo setarch --verbose --addr-no-randomize ./memalloc
+
+To run 1000 times to create data for CDF
+
+for x in {1..1000}; do sudo setarch --verbose --addr-no-randomize ./memalloc; done
+
+while also running sudo dmesg --follow > dmesgLog
 */
  
 #include<stdlib.h>
 #include<string.h>
 #include<stdio.h>
 #include<unistd.h>
+#include<time.h>
 
 //part 2 only uses /proc/5204(k)
-#include "pagemap.h"
+//#include "pagemap.h"
 
 
 void **pointerArray;
@@ -25,21 +34,21 @@ void sendVa(void* va, FILE *procFile){
 }
 
 int main(int argc, char* argv[]){
-    //open up logfile and pagemap
-    FILE *logfilep = fopen("log", "w");
-    fprintf(logfilep, "va,pa,latency\n");
-    char *pmstr = calloc(20, sizeof(char));
-    char *proc = "/proc/";
-    int pidNum = getpid();
-    char pid[6];
-    sprintf(pid, "%d", pidNum);
-    fprintf(stderr, "%s\n", pid);
-    char *pagemap = "/pagemap";
-    strcat(pmstr, proc);
-    strcat(pmstr, pid);
-    strcat(pmstr, pagemap);
-    FILE *pagemapp = fopen(pmstr, "r");
-    int pagemapfd = fileno(pagemapp);
+    //open up logfile and pagemap - only used for checking kernel module
+    // FILE *logfilep = fopen("log", "w");
+    // fprintf(logfilep, "va,pa,latency\n");
+    // char *pmstr = calloc(20, sizeof(char));
+    // char *proc = "/proc/";
+    // int pidNum = getpid();
+    // char pid[6];
+    // sprintf(pid, "%d", pidNum);
+    // fprintf(stderr, "%s\n", pid);
+    // char *pagemap = "/pagemap";
+    // strcat(pmstr, proc);
+    // strcat(pmstr, pid);
+    // strcat(pmstr, pagemap);
+    // FILE *pagemapp = fopen(pmstr, "r");
+    // int pagemapfd = fileno(pagemapp);
 
     FILE *procFile = fopen("/proc/5204k", "w");
 
@@ -47,20 +56,15 @@ int main(int argc, char* argv[]){
     void* p = malloc(1024*1024*1024);
     ((int*)p)[0] = 68;
     int check = ((int*)p)[0];
-    //fprintf(stderr, "68: %d\n", ((int*)p)[0]);
 
-    //void* test = (void*)0x7ffff7ded000;
     sendVa(p, procFile);
-    logToFile(p, pagemapfd, logfilep);
+    //logToFile(p, pagemapfd, logfilep);
+
+    sleep(1);//60
 
     fclose(procFile);
-    fclose(pagemapp);
-    fclose(logfilep);
-
-    //time to check /proc/pid/maps
-    // int input;
-    // scanf("%d", &input);
-
+    // fclose(pagemapp);
+    // fclose(logfilep);
     free(p);
 }
 
