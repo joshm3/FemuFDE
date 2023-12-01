@@ -286,26 +286,4 @@ module_exit(custom_exit);
 
 
 //should be time < 10*60
-    // for (second = 0; second < 60; second++){ //600 100ms intervals
-    //     accessCount = 0;
-    //     for (time = 0; time < 10; time++){
-    //         for (curVaddr = vaddr_glob; curVaddr < vaddr_glob + 1024*1024*1024; curVaddr += 4096){
-    //             //printk(KERN_INFO "vaddr 0x%lx\n",curVaddr);
-    //             //printk(KERN_INFO "bit accessed,%d\n",accessBit);
-    //             accessCount += vaddr2accessbit(mm_glob, curVaddr);
-    //         }
-    //         msleep(90);   //delay for 100ms - runtime
-    //     }
-    //     printk(KERN_ERR "accessCount,%d\n",accessCount);
-    // }
-    // timet = ktime_get_ns() - timet;
-
-    // printk(KERN_ERR "time for 60 seconds: %llu\n", timet/1000000000);
-
-
-
-
-
-    
-
-
+  

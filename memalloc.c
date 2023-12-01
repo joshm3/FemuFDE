@@ -1,16 +1,19 @@
 /*
  * memalloc.c for cs 5204 lab 2 part 2- Joshua Martin
  * 
- * gcc memalloc.c pagemap.c -o memalloc 
+make
+sudo insmod ko5204.ko
+gcc memalloc.c -o memalloc
+sudo setarch --verbose --addr-no-randomize ./memalloc
+sudo rmmod ko5204.ko
+sudo tail -n 64 /var/log/kern.log > heatLog.csv
 
- * gcc memalloc.c -o memalloc
+clean up heatLog.csv manually - pretty easy
+
+python3 heatmap.py
 */
 
-/*DISABLE VIRTUAL ADDRESS SPACE RANDOMIZATION
-sudo setarch --verbose --addr-no-randomize ./memalloc
-
-To run 1000 times to create data for CDF
-
+/*For latency distribution
 for x in {1..1000}; do sudo setarch --verbose --addr-no-randomize ./memalloc; done
 
 while also running sudo dmesg --follow > dmesgLog
