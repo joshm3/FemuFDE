@@ -172,38 +172,47 @@ out:
     the access counts every 100ms.*/
 int thread_function(void *v){
     unsigned long curVaddr;
-    int time;
-    int second;
-    int accessCount = 0;
     u64 startTime;
-    int counter;
+    u64 counter = 0;
+    int i;
+    // int* accessFreq = kzalloc(256*1024*sizeof(int), GFP_KERNEL);
+    int* accessFreq = kzalloc(256*sizeof(int), GFP_KERNEL);
 
-    startTime = ktime_get_ns();
+    printk(KERN_CONT "address,");
+    for (curVaddr = vaddr_glob; curVaddr < vaddr_glob + 1024*1024*1024; curVaddr += 4096*1024){
+        printk(KERN_CONT "%lu,", curVaddr);
+    }
+    printk(KERN_CONT "\n");
 
-    while(ktime_get_ns() < startTime + 60*1000000000){
+    startTime = ktime_get_real_ns();
+    while(ktime_get_real_ns() < startTime + 60000000000){
         //loop through and check all accessBits
+        for (curVaddr = vaddr_glob; curVaddr < vaddr_glob + 1024*1024*1024; curVaddr += 4096){
+            // accessFreq[(curVaddr - vaddr_glob)/4096] += vaddr2accessbit(mm_glob, curVaddr);
+            accessFreq[((curVaddr - vaddr_glob)/4096)/1024] += vaddr2accessbit(mm_glob, curVaddr);
+        }
 
         //check if 100ms has passed and aggregation is needed
+        if (ktime_get_real_ns() > startTime+counter*100000000){
+            counter++;
+            //aggregate just store the data and reset it?
 
-        //check if 1s has passed and data needs to be logged
-    }
-
-    //should be time < 10*60
-    for (second = 0; second < 60; second++){ //600 100ms intervals
-        accessCount = 0;
-        for (time = 0; time < 10; time++){
-            for (curVaddr = vaddr_glob; curVaddr < vaddr_glob + 1024*1024*1024; curVaddr += 4096){
-                //printk(KERN_INFO "vaddr 0x%lx\n",curVaddr);
-                //printk(KERN_INFO "bit accessed,%d\n",accessBit);
-                accessCount += vaddr2accessbit(mm_glob, curVaddr);
+            //check if 1s has passed and data needs to be logged
+            if (counter % 10 == 0){
+                //log all the last 10 100ms intervals data?
+                printk(KERN_CONT ",%llu,", counter/10);
+                // for(i = 0; i < 256*1024; i++){
+                for(i = 0; i < 256; i++){
+                    printk(KERN_CONT "%d,", accessFreq[i]/1024);
+                    accessFreq[i] = 0;
+                }
+                printk(KERN_CONT "\n");
             }
-            msleep(90);   //delay for 100ms - runtime
         }
-        printk(KERN_ERR "accessCount,%d\n",accessCount);
+        //maximize the readings while still taking very small breaks
+        usleep_range_state(1, 5, TASK_INTERRUPTIBLE); 
     }
-    timet = ktime_get_ns() - timet;
-
-    printk(KERN_ERR "time for 60 seconds: %llu\n", timet/1000000000);
+    kfree(accessFreq);
     return 0;
 }
 #endif
@@ -215,8 +224,6 @@ static ssize_t custom_write(struct file* file, const char __user* va, size_t cou
     u64 time;
     unsigned long vaddr;
     unsigned long paddr;
-    int accessBit;
-    int i;
 
     //first start time
     time = ktime_get_ns();
@@ -276,6 +283,24 @@ module_exit(custom_exit);
 
 
 
+
+
+//should be time < 10*60
+    // for (second = 0; second < 60; second++){ //600 100ms intervals
+    //     accessCount = 0;
+    //     for (time = 0; time < 10; time++){
+    //         for (curVaddr = vaddr_glob; curVaddr < vaddr_glob + 1024*1024*1024; curVaddr += 4096){
+    //             //printk(KERN_INFO "vaddr 0x%lx\n",curVaddr);
+    //             //printk(KERN_INFO "bit accessed,%d\n",accessBit);
+    //             accessCount += vaddr2accessbit(mm_glob, curVaddr);
+    //         }
+    //         msleep(90);   //delay for 100ms - runtime
+    //     }
+    //     printk(KERN_ERR "accessCount,%d\n",accessCount);
+    // }
+    // timet = ktime_get_ns() - timet;
+
+    // printk(KERN_ERR "time for 60 seconds: %llu\n", timet/1000000000);
 
 
 

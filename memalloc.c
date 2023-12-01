@@ -108,10 +108,6 @@ int main(int argc, char* argv[]){
     //fprintf(stderr, "counter %d\n", counter);
 
     continueThread = 0;
-    //pthread_cancel(fast); didn't like idk
-
-    // int var;
-    // scanf("%d", &var);
 
     // fclose(pagemapp);
     // fclose(logfilep);
