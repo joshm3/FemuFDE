@@ -21,16 +21,41 @@ while also running sudo dmesg --follow > dmesgLog
 #include<stdio.h>
 #include<unistd.h>
 #include<time.h>
+#include<pthread.h>
 
 //part 2 only uses /proc/5204(k)
-//#include "pagemap.h"
+// #include "pagemap.h"
 
+static int continueThread = 1;
 
-void **pointerArray;
+void* fastWrite(void* p){
+    while(continueThread){
+        for (int i = 0; i < 256*1024*1024; i+= 4096){
+            void * temp = p+i;
+            ((int*)temp)[0] = 9;
+        }
+    }
+}
+
+void* delayWrite(void* p){
+    //each loop takes at least 90ms cant do every ms?
+    //not WORKING!!!!
+    for (int i = 256*1024*1024; i < 512*1024*1024; i+= 4096){
+        void * temp = p+i;
+        ((int*)temp)[0] = 9;
+    }
+}
 
 void sendVa(void* va, FILE *procFile){
     fprintf(stderr, "sending 0x%lx\n", (unsigned long)va);
     fprintf(procFile, "%p", va);
+}
+
+void* kernelCall(void* p){
+    //each loop takes at least 90ms cant to every ms?
+    FILE *procFile = fopen("/proc/5204k", "w");
+    sendVa(p, procFile);
+    fclose(procFile);
 }
 
 int main(int argc, char* argv[]){
@@ -50,19 +75,44 @@ int main(int argc, char* argv[]){
     // FILE *pagemapp = fopen(pmstr, "r");
     // int pagemapfd = fileno(pagemapp);
 
-    FILE *procFile = fopen("/proc/5204k", "w");
-
-    //allocate in heap
+    //allocate in heap and make sure it has physical memory
     void* p = malloc(1024*1024*1024);
     ((int*)p)[0] = 68;
     int check = ((int*)p)[0];
+    
+    pthread_t kernelThread;
+    pthread_create(&kernelThread, NULL, kernelCall, p);
+    // logToFile(test, pagemapfd, logfilep);
+    
+    //In your memalloc.c, keep writing to all the pages in [0, 256MB] sequentially as fast
+    //  as you can and writing to all the page [256MB, 512MB] every 1ms.
+    
+    pthread_t fast;
+    pthread_create(&fast, NULL, fastWrite, p);
+    //should be 60*1000
+    int counter = 0;
 
-    sendVa(p, procFile);
-    //logToFile(p, pagemapfd, logfilep);
+    struct timespec start, now;
+    clock_gettime(CLOCK_MONOTONIC, &start);
+    double last = start.tv_sec+1e-9*start.tv_nsec;
+    while( (now.tv_sec+1e-9*now.tv_nsec) < (start.tv_sec+1e-9*start.tv_nsec+60.001) ){
+        //fprintf(stderr, "%f\n", newTime);
+        clock_gettime(CLOCK_MONOTONIC, &now);
+        if (now.tv_sec+1e-9*now.tv_nsec > last + 0.001){
+            last = now.tv_sec+1e-9*now.tv_nsec;
+            //counter++;
+            pthread_t delay;
+            pthread_create(&delay, NULL, delayWrite, p);  
+        }   
+    }
+    //fprintf(stderr, "counter %d\n", counter);
 
-    sleep(1);//60
+    continueThread = 0;
+    //pthread_cancel(fast); didn't like idk
 
-    fclose(procFile);
+    // int var;
+    // scanf("%d", &var);
+
     // fclose(pagemapp);
     // fclose(logfilep);
     free(p);
