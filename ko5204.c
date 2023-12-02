@@ -231,20 +231,21 @@ static ssize_t custom_write(struct file* file, const char __user* va, size_t cou
     unsigned long vaddr;
     unsigned long paddr;
 
-    //first start time
-    time = ktime_get_ns();
-
     //convert pa to va
     if(sscanf(va,"0x%lx",&vaddr)==1){
         //printk(KERN_INFO "vaddr is 0x%lx\n",vaddr);
+
+        //first start time
+        time = ktime_get_ns();
+
         paddr = vaddr2paddr(current->mm, vaddr);
         if (paddr == 0){
-            printk(KERN_ERR "virt2phys failed\n");
+            printk(KERN_ERR "virt2paddr failed\n");
         }
-    }
 
-    //calculate total latency and convert to ms
-    time = ktime_get_ns() - time;
+        //calculate total latency
+        time = ktime_get_ns() - time;
+    }
 
     //print to "/var/log/kern.log" remember time is in ns
     printk(KERN_ERR "5204log,%lx,%lx,%llu\n",vaddr,paddr,time);
