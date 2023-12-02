@@ -6,7 +6,7 @@ sudo insmod ko5204.ko
 gcc memalloc.c -o memalloc
 sudo setarch --verbose --addr-no-randomize ./memalloc
 sudo rmmod ko5204.ko
-sudo tail -n 64 /var/log/kern.log > heatLog.csv
+sudo tail -n 650 /var/log/kern.log > heatLog.csv
 
 clean up heatLog.csv manually - pretty easy
 
@@ -35,18 +35,18 @@ void* fastWrite(void* p){
     while(continueThread){
         for (int i = 0; i < 256*1024*1024; i+= 4096){
             void * temp = p+i;
-            ((int*)temp)[0] = 9;
+            ((int*)temp)[0] = 1;
         }
     }
 }
 
 void* delayWrite(void* p){
-    //each loop takes at least 90ms cant do every ms?
-    //not WORKING!!!!
-    for (int i = 256*1024*1024; i < 512*1024*1024; i+= 4096){
-        void * temp = p+i;
-        ((int*)temp)[0] = 9;
-    }
+    // for (int j = 0; j < 1000; j++){
+        for (int i = 256*1024*1024; i < 512*1024*1024; i+= 4096){
+            void * temp = p+i;
+            ((int*)temp)[0] = 1;
+        }
+    // }
 }
 
 void sendVa(void* va, FILE *procFile){
@@ -68,9 +68,9 @@ int main(int argc, char* argv[]){
     // char *pmstr = calloc(20, sizeof(char));
     // char *proc = "/proc/";
     // int pidNum = getpid();
-    // char pid[6];
-    // sprintf(pid, "%d", pidNum);
-    // fprintf(stderr, "%s\n", pid);
+    // char pidn[6];
+    // sprintf(pidn, "%d", pidNum);
+    // fprintf(stderr, "%s\n", pidn);
     // char *pagemap = "/pagemap";
     // strcat(pmstr, proc);
     // strcat(pmstr, pid);
@@ -80,8 +80,10 @@ int main(int argc, char* argv[]){
 
     //allocate in heap and make sure it has physical memory
     void* p = malloc(1024*1024*1024);
-    ((int*)p)[0] = 68;
-    int check = ((int*)p)[0];
+    for (int i = 0; i < 1024*1024*1024; i+= 4096){
+        void * temp = p+i;
+        ((int*)temp)[0] = 1;
+    }
     
     pthread_t kernelThread;
     pthread_create(&kernelThread, NULL, kernelCall, p);
@@ -89,33 +91,51 @@ int main(int argc, char* argv[]){
     
     //In your memalloc.c, keep writing to all the pages in [0, 256MB] sequentially as fast
     //  as you can and writing to all the page [256MB, 512MB] every 1ms.
-    
     pthread_t fast;
     pthread_create(&fast, NULL, fastWrite, p);
-    //should be 60*1000
-    int counter = 0;
 
-    struct timespec start, now;
-    clock_gettime(CLOCK_MONOTONIC, &start);
-    double last = start.tv_sec+1e-9*start.tv_nsec;
-    while( (now.tv_sec+1e-9*now.tv_nsec) < (start.tv_sec+1e-9*start.tv_nsec+60.001) ){
-        //fprintf(stderr, "%f\n", newTime);
-        clock_gettime(CLOCK_MONOTONIC, &now);
-        if (now.tv_sec+1e-9*now.tv_nsec > last + 0.001){
-            last = now.tv_sec+1e-9*now.tv_nsec;
-            //counter++;
-            pthread_t delay;
-            pthread_create(&delay, NULL, delayWrite, p);  
+    int counter = 0;
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    double start = ts.tv_sec+1e-9*ts.tv_nsec;
+    double end = start+60.001;
+    double now = start;
+    pthread_t pid[60000]; //should start 60,000 threads
+
+    while(now < end){ 
+        clock_gettime(CLOCK_MONOTONIC, &ts); 
+        now = ts.tv_sec+1e-9*ts.tv_nsec;
+
+        //can only do increments of .025 reliably
+        if (now > (start+counter*.025) ){
+            pthread_create(&pid[counter], NULL, delayWrite, p);  
+            counter++;
         }   
     }
-    //fprintf(stderr, "counter %d\n", counter);
+    fprintf(stderr, "loops of 25ms in 60s: %d\n", counter);
 
+    
+
+    sleep(0.01); //wait for delayWrite thread
     continueThread = 0;
-
+    sleep(3); //wait for kernel thread
     // fclose(pagemapp);
     // fclose(logfilep);
     free(p);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

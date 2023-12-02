@@ -154,15 +154,17 @@ static int vaddr2accessbit(struct mm_struct *mm, unsigned long vaddr){
 
     if (!(ptep = pte_offset_map(pmd, vaddr)))
         goto out;
-    //probably needs lock
     if (pte_present(*ptep)){
         accessBit = pte_young(*ptep);
-        //not sure about this? 
-        //resets the access bit but gets set right back
         ptep->pte &= ~(1ULL << 5);
-    }
+    } // else {
+    //     pr_err("pte not present");
+    // }
     pte_unmap(ptep);
+
+    return accessBit == 32;
 out:
+    pr_err("error getting to access bit");
     return accessBit == 32;
 }
 
@@ -175,21 +177,23 @@ int thread_function(void *v){
     u64 startTime;
     u64 counter = 0;
     int i;
+    unsigned long va;
+    int j;
     // int* accessFreq = kzalloc(256*1024*sizeof(int), GFP_KERNEL);
-    int* accessFreq = kzalloc(256*sizeof(int), GFP_KERNEL);
+    int* accessFreq = kzalloc(10*256*sizeof(int), GFP_KERNEL);
 
-    printk(KERN_CONT "address,");
-    for (curVaddr = vaddr_glob; curVaddr < vaddr_glob + 1024*1024*1024; curVaddr += 4096*1024){
-        printk(KERN_CONT "%lu,", curVaddr);
+    printk(KERN_CONT ",address,");
+    for (va = 0; va < 1024*1024*1024; va+= 4096*1024){
+        printk(KERN_CONT "%lu,", va);
     }
     printk(KERN_CONT "\n");
 
     startTime = ktime_get_real_ns();
     while(ktime_get_real_ns() < startTime + 60000000000){
         //loop through and check all accessBits
-        for (curVaddr = vaddr_glob; curVaddr < vaddr_glob + 1024*1024*1024; curVaddr += 4096){
+        for (curVaddr = vaddr_glob; curVaddr < vaddr_glob + 512*1024*1024; curVaddr += 4096){
             // accessFreq[(curVaddr - vaddr_glob)/4096] += vaddr2accessbit(mm_glob, curVaddr);
-            accessFreq[((curVaddr - vaddr_glob)/4096)/1024] += vaddr2accessbit(mm_glob, curVaddr);
+            accessFreq[((counter%10)*256)+((curVaddr - vaddr_glob)/4096)/1024] += vaddr2accessbit(mm_glob, curVaddr);
         }
 
         //check if 100ms has passed and aggregation is needed
@@ -200,17 +204,19 @@ int thread_function(void *v){
             //check if 1s has passed and data needs to be logged
             if (counter % 10 == 0){
                 //log all the last 10 100ms intervals data?
-                printk(KERN_CONT ",%llu,", counter/10);
-                // for(i = 0; i < 256*1024; i++){
-                for(i = 0; i < 256; i++){
-                    printk(KERN_CONT "%d,", accessFreq[i]/1024);
-                    accessFreq[i] = 0;
+                for(j = 0; j < 10; j++){
+                    printk(KERN_CONT ",%llu.%d,", counter/10, j);
+                    // for(i = 0; i < 256*1024; i++){
+                    for(i = 0; i < 256; i++){
+                        printk(KERN_CONT "%d,", accessFreq[j*256+i]/1024);
+                        accessFreq[j*256+i] = 0;
+                    }
+                    printk(KERN_CONT "\n");
                 }
-                printk(KERN_CONT "\n");
+                //maximize the readings while still taking very small breaks
+                usleep_range_state(1, 3, TASK_INTERRUPTIBLE); 
             }
         }
-        //maximize the readings while still taking very small breaks
-        usleep_range_state(1, 5, TASK_INTERRUPTIBLE); 
     }
     kfree(accessFreq);
     return 0;
