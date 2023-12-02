@@ -1,3 +1,7 @@
+
+//#define improvement
+#define basic
+
 /*
  * memalloc.c for cs 5204 lab 2 part 2- Joshua Martin
  * 
@@ -29,6 +33,7 @@ while also running sudo dmesg --follow > dmesgLog
 //part 2 only uses /proc/5204(k)
 // #include "pagemap.h"
 
+#ifdef improvement
 static int continueThread = 1;
 
 void* fastWrite(void* p){
@@ -48,11 +53,13 @@ void* delayWrite(void* p){
         }
     // }
 }
+#endif
 
 void sendVa(void* va, FILE *procFile){
     fprintf(stderr, "sending 0x%lx\n", (unsigned long)va);
     fprintf(procFile, "%p", va);
 }
+
 
 void* kernelCall(void* p){
     //each loop takes at least 90ms cant to every ms?
@@ -84,11 +91,18 @@ int main(int argc, char* argv[]){
         void * temp = p+i;
         ((int*)temp)[0] = 1;
     }
-    
+
+#ifdef basic
+    FILE *procFile = fopen("/proc/5204k", "w");
+    sendVa(p, procFile);
+    fclose(procFile);
+    // logToFile(test, pagemapfd, logfilep);
+#endif
+
+#ifdef improvement
     pthread_t kernelThread;
     pthread_create(&kernelThread, NULL, kernelCall, p);
-    // logToFile(test, pagemapfd, logfilep);
-    
+
     //In your memalloc.c, keep writing to all the pages in [0, 256MB] sequentially as fast
     //  as you can and writing to all the page [256MB, 512MB] every 1ms.
     pthread_t fast;
@@ -114,11 +128,10 @@ int main(int argc, char* argv[]){
     }
     fprintf(stderr, "loops of 25ms in 60s: %d\n", counter);
 
-    
-
     sleep(0.01); //wait for delayWrite thread
     continueThread = 0;
     sleep(3); //wait for kernel thread
+#endif
     // fclose(pagemapp);
     // fclose(logfilep);
     free(p);

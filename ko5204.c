@@ -64,7 +64,7 @@
 #include <linux/module.h>
 #include <linux/kprobes.h>
 
-#define improvement
+//#define improvement
 
 // Module metadata
 MODULE_AUTHOR("Joshua Martin");
@@ -246,9 +246,11 @@ static ssize_t custom_write(struct file* file, const char __user* va, size_t cou
     //calculate total latency and convert to ms
     time = ktime_get_ns() - time;
 
-    printk(KERN_ERR "starting bg thread\n");
+    //print to "/var/log/kern.log" remember time is in ns
+    printk(KERN_ERR "5204log,%lx,%lx,%llu\n",vaddr,paddr,time);
 
 #ifdef improvement
+    printk(KERN_ERR "starting bg thread\n");
     //Improve your kernel module to run a kernel thread...
     mm_glob = current->mm;
     vaddr_glob = vaddr;
@@ -259,9 +261,6 @@ static ssize_t custom_write(struct file* file, const char __user* va, size_t cou
         pr_err("Cannot create kthread\n");
     }
 #endif
-
-    //print to "/var/log/kern.log" remember time is in ns
-    printk(KERN_ERR "5204log,%lx,%lx,%llu\n",vaddr,paddr,time);
     
     return count;
 }
