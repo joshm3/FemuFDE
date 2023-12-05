@@ -1,3 +1,5 @@
+#!/bin/bash
+
 cd ..
 
 #Make sure everything is updated
