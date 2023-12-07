@@ -1,0 +1,32 @@
+First we need relevant inputs for ./run-blackbox.sh. 
+The read/write/erase latencies should just be some values taken from modern ssds.
+The enc_lat and dec_lat should be taken from the kernel crypto API inside the FEMU guest VM.
+They can be gotten by running ./runCryptBench.sh
+
+The following tests need to be run for FemuFDE: 
+*All read tests must be after sequential writes
+*store all fio tests in this git repo
+*maximize the size of the femu ssd
+*run all write tests over twice the size of it so we can see steady state
+*run all read tests over the size of it - no need to do more
+*make sure all the data is logged so it can be graphed like the earlier lab
+*graph both the latencies and bandwidth
+*put the command line results in results.txt and make sure to put all the 
+    logs and graphs in this git repo
+
+sequential writes
+sequential reads
+random writes
+random reads
+
+All of those tests must be run with the following setups
+*luks encryption should use standard xts aes with 512 bit key
+
+basic ramdisk (just femu with no latencies)
+    -with no encryption, with femu tweak encryption, with femu tweakless encryption, with luks encryption
+basic femu read and write latencies (from looking the average values up)
+    -with no encryption, with femu tweak encryption, with femu tweakless encryption, with luks encryption
+
+
+Should be 32 total tests so might take a while. I would just put the four fio run commands
+    in a bash.sh file so they can autorun for each setup.

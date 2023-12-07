@@ -237,8 +237,10 @@ static void check_params(struct ssdparams *spp)
 static void ssd_init_params(struct ssdparams *spp, FemuCtrl *n)
 {
 #ifdef CRYPT //Not how this will actually be when finished
-    spp->enc_lat = 30000; //30 microseconds
-    spp->dec_lat = 30000;
+    spp->enc_lat = n->bb_params.enc_lat;
+    spp->dec_lat = n->bb_params.dec_lat;
+    spp->enable_crypt_delay = n->bb_params.enable_crypt_delay;
+    spp->enable_tweakless = n->bb_params.enable_tweakless;
 #endif
     spp->secsz = n->bb_params.secsz; // 512
     spp->secs_per_pg = n->bb_params.secs_per_pg; // 8
@@ -480,14 +482,22 @@ static uint64_t ssd_advance_status(struct ssd *ssd, struct ppa *ppa, struct
     case NAND_READ:
         /* read: perform NAND cmd first */
 #ifdef CRYPT
-        nand_stime = (lun->next_lun_avail_time < cmd_stime) ? cmd_stime : \
-                     lun->next_lun_avail_time;
-        lun->next_lun_avail_time = nand_stime + spp->pg_rd_lat;
-        //now going to have to run it through decryption
-        crypt_stime = (ssd->next_crypt_avail_time < lun->next_lun_avail_time) ? \
-                    lun->next_lun_avail_time : ssd->next_crypt_avail_time;
-        ssd->next_crypt_avail_time = lun->next_lun_avail_time + spp->dec_lat;
-        lat = ssd->next_crypt_avail_time - cmd_stime;
+        //delay is disabled with tweak decryption and GC_IO
+        if (spp->enable_crypt_delay && (!(ncmd->type==GC_IO) || spp->enable_tweakless)){
+            nand_stime = (lun->next_lun_avail_time < cmd_stime) ? cmd_stime : \
+                        lun->next_lun_avail_time;
+            lun->next_lun_avail_time = nand_stime + spp->pg_rd_lat;
+            //now going to have to run it through decryption
+            crypt_stime = (ssd->next_crypt_avail_time < lun->next_lun_avail_time) ? \
+                        lun->next_lun_avail_time : ssd->next_crypt_avail_time;
+            ssd->next_crypt_avail_time = crypt_stime + spp->dec_lat;
+            lat = ssd->next_crypt_avail_time - cmd_stime;
+        } else {
+            nand_stime = (lun->next_lun_avail_time < cmd_stime) ? cmd_stime : \
+                        lun->next_lun_avail_time;
+            lun->next_lun_avail_time = nand_stime + spp->pg_rd_lat;
+            lat = lun->next_lun_avail_time - cmd_stime;
+        }
 #endif
 #ifndef CRYPT
         nand_stime = (lun->next_lun_avail_time < cmd_stime) ? cmd_stime : \
@@ -511,19 +521,30 @@ static uint64_t ssd_advance_status(struct ssd *ssd, struct ppa *ppa, struct
     case NAND_WRITE:
         /* write: transfer data through channel first */
 #ifdef CRYPT
-        //first going to have to run it encryption
-        crypt_stime = (ssd->next_crypt_avail_time < cmd_stime) ? cmd_stime : \
-                    ssd->next_crypt_avail_time;
-        ssd->next_crypt_avail_time = crypt_stime + spp->enc_lat;
-        //cmd now starts after encryption time
-        nand_stime = (lun->next_lun_avail_time < ssd->next_crypt_avail_time) ? \
-                     ssd->next_crypt_avail_time : lun->next_lun_avail_time;
-        if (ncmd->type == USER_IO) {
-            lun->next_lun_avail_time = nand_stime + spp->pg_wr_lat;
+        if (spp->enable_crypt_delay && (!(ncmd->type==GC_IO) || spp->enable_tweakless)){
+            //first going to have to run it encryption
+            crypt_stime = (ssd->next_crypt_avail_time < cmd_stime) ? cmd_stime : \
+                        ssd->next_crypt_avail_time;
+            ssd->next_crypt_avail_time = crypt_stime + spp->enc_lat;
+            //cmd now starts after encryption time
+            nand_stime = (lun->next_lun_avail_time < ssd->next_crypt_avail_time) ? \
+                        ssd->next_crypt_avail_time : lun->next_lun_avail_time;
+            if (ncmd->type == USER_IO) {
+                lun->next_lun_avail_time = nand_stime + spp->pg_wr_lat;
+            } else {
+                lun->next_lun_avail_time = nand_stime + spp->pg_wr_lat;
+            }
+            lat = lun->next_lun_avail_time - cmd_stime;
         } else {
-            lun->next_lun_avail_time = nand_stime + spp->pg_wr_lat;
+            nand_stime = (lun->next_lun_avail_time < cmd_stime) ? cmd_stime : \
+                        lun->next_lun_avail_time;
+            if (ncmd->type == USER_IO) {
+                lun->next_lun_avail_time = nand_stime + spp->pg_wr_lat;
+            } else {
+                lun->next_lun_avail_time = nand_stime + spp->pg_wr_lat;
+            }
+            lat = lun->next_lun_avail_time - cmd_stime;
         }
-        lat = lun->next_lun_avail_time - cmd_stime;
 #endif
 #ifndef CRYPT
         nand_stime = (lun->next_lun_avail_time < cmd_stime) ? cmd_stime : \

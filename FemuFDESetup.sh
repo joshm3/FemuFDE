@@ -20,7 +20,11 @@ cd ~
 mkdir ./images
 cd ./images
 wget http://people.cs.uchicago.edu/~huaicheng/femu/femu-vm.tar.xz
-tar xJvf femu-vm.tar.xz
+tar -xjvf femu-vm.tar.xz #changed this recently may not work
+
+#Now install the changes in femu for encryption delay
+cd ~/FemuFDE
+./putCryptFemu.sh
 
 cd ~/femu/build-femu
-#now you can run ./run-blackbox.sh
+#now you can run ./run-blackbox.sh - doesn;t always put you here?

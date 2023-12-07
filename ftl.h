@@ -7,7 +7,9 @@
 #define INVALID_LPN     (~(0ULL))
 #define UNMAPPED_PPA    (~(0ULL))
 
-//#define CRYPT
+#ifndef CRYPT
+#define CRYPT
+#endif
 
 enum {
     NAND_READ =  0,
@@ -113,6 +115,8 @@ struct ssdparams {
 #ifdef CRYPT
     int enc_lat; /* encryption latency in nanoseconds */
     int dec_lat; /* decryption latency in nanoseconds */
+    bool enable_crypt_delay;
+    bool enable_tweakless;
 #endif
     int secsz;        /* sector size in bytes */
     int secs_per_pg;  /* # of sectors per page */
