@@ -13,6 +13,13 @@ cd build-femu
 cp ../femu-scripts/femu-copy-scripts.sh .
 ./femu-copy-scripts.sh .
 sudo ./pkgdep.sh
+
+#Now install the changes in femu for encryption delay
+cd ~/FemuFDE
+./putCryptFemu.sh
+
+#Compile femu
+cd ~/femu/build-femu
 ./femu-compile.sh
 
 #Now setup ~/images/u20s.qcow2?
@@ -21,10 +28,6 @@ mkdir ./images
 cd ./images
 wget http://people.cs.uchicago.edu/~huaicheng/femu/femu-vm.tar.xz
 tar -xjvf femu-vm.tar.xz #changed this recently may not work
-
-#Now install the changes in femu for encryption delay
-cd ~/FemuFDE
-./putCryptFemu.sh
 
 cd ~/femu/build-femu
 #now you can run ./run-blackbox.sh - doesn;t always put you here?
