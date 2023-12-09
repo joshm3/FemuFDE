@@ -20,11 +20,12 @@ blk_er_lat=0 # block erase latency
 
 
 Fio Tests:
-run with 1 thread, on iodepth of 1, numjobs=1
-all reads/writes with block size of 4K (4096 bytes)
-log_avg_msec=1000
-bwavgtime=1000
-None was on steady state for writes, on empty nvme
+The specific files are in the fio directory. Here are their properties - 
+  run with 1 thread, on iodepth of 1, numjobs=1
+  all reads/writes with block size of 4K (4096 bytes)
+  log_avg_msec=1000
+  bwavgtime=1000
+  Writes were not done on steady state
 
 
 To read the results text files, they are the following format:
