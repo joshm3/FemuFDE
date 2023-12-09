@@ -25,3 +25,11 @@ all reads/writes with block size of 4K (4096 bytes)
 log_avg_msec=1000
 bwavgtime=1000
 None was on steady state for writes, on empty nvme
+
+
+To read the results text files, they are the following format:
+  -random read results
+  -random write results
+  -sequential read results
+  -sequential write results
+The reads also have a sequential fill portion.
